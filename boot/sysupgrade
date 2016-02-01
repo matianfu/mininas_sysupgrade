@@ -17,16 +17,6 @@ if [ "$?" -ne 0 ]; then
 fi
 
 #
-# check image file
-#
-if [ ! -e "/p2/boot/mmcblk0p1.tar.xz" ]; then
-    # 
-    echo "image file not found"
-    rm /p2/boot/cmdline
-    reboot -f
-fi
-
-#
 # bring up httpd
 #
 if [ -e "/p2/boot/ipaddr" ]; then
@@ -42,10 +32,10 @@ biecho () {
     echo "${1}<br>" > $STATUS_FILE
 }
 
-biecho "Start burning new system image..."
+# overwrite netatalk global, fix bad homes section
+biecho "patch netatalk templates file"
+cp /p2/boot/templates/netatalk/global /p1/etc/mininas/templates/netatalk/global
 
-biecho "extract new system to partition 1"
-busybox xz -c -d /p2/boot/mmcblk0p1.tar.xz | tar xf - -C /p1
 
 biecho "booting new system..."
 rm /p2/boot/cmdline
