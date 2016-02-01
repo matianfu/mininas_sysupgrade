@@ -1,0 +1,85 @@
+#!/bin/sh
+
+# prepare dirs for mount point
+mkdir p1
+mkdir p2
+
+# this cannot fail, otherwise endless reboot
+mount -t ext4 /dev/mmcblk0p2 /p2
+if [ "$?" -ne 0 ]; then
+    reboot -f
+fi
+
+mount -t ext4 /dev/mmcblk0p1 /p1
+if [ "$?" -ne 0 ]; then
+    # TODO
+    reboot -f   
+fi
+
+#
+# check image file
+#
+if [ ! -e "/p2/boot/mmcblk0p1.tar.xz" ]; then
+    # 
+    echo "image file not found"
+    rm /p2/boot/cmdline
+    reboot -f
+fi
+
+#
+# bring up httpd
+#
+if [ -e "/p2/boot/ipaddr" ]; then
+    busybox ifconfig eth0 $(cat /p2/boot/ipaddr) netmask 255.255.255.0 up
+    busybox httpd -h /p2/boot/www
+fi
+
+STATUS_FILE=/p2/boot/www/status.txt
+
+biecho () {
+    
+    echo "$1"
+    echo "${1}<br>" > $STATUS_FILE
+}
+
+biecho "Start burning new system image..."
+
+#
+# back up acount info
+#
+if [ -e /p2/boot/passwd ] && [ -e /p2/boot/shadow ] && [ -e /p2/boot/group ] && [ -e /p2/booot/gshadow ]; then
+    biecho "account files already copied"
+else
+    biecho "backup account files"
+    cp /p1/etc/passwd   /p2/boot/passwd
+    cp /p1/etc/shadow   /p2/boot/shadow
+    cp /p1/etc/group    /p2/boot/group
+    cp /p1/etc/gshadow  /p2/boot/gshadow
+fi
+
+biecho "clean partition 1"
+rm -rf /p1/..?*
+rm -rf /p1/.[!.]*
+rm -rf /p1/*
+
+biecho "extract new system to partition 1"
+busybox xz -c -d /p2/boot/mmcblk0p1.tar.xz | tar xf - -C /p1
+
+biecho "restore account files"
+cp  /p2/boot/passwd     /p1/etc/passwd
+cp  /p2/boot/shadow     /p1/etc/shadow
+cp  /p2/boot/group      /p1/etc/group
+cp  /p2/boot/gshadow    /p1/etc/gshadow
+
+biecho "clean some folders"
+rm -rf /p1/dev/*
+
+biecho "booting new system..."
+rm /p2/boot/cmdline
+busybox sync
+busybox reboot -f
+
+# kexec -l /p1/boot/bzImage --initrd=/p1/boot/ramdisk --append="console=tty0 console=ttyS0,115200 root=/dev/mmcblk0p1 rootwait"
+
+
+
