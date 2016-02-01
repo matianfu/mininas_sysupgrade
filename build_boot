@@ -1,15 +1,15 @@
 #!/bin/bash
 
 CHECKSUM=
-HTTPURL="http://sysupgrade.wisnuc.com/NasUpdate/files/"
+HTTPURL="http://sysupgrade.wisnuc.com/NasUpdate/files"
 TARBALL="barcelona-sysupgrade-0000-0001.tar"
 
 rm -rf release
-svn checkout https://192.168.5.40/svn/PythonWebProject/branches/release --username jiangwei --password 123456 --quiet --no-auth-cache -r 1378
+svn checkout https://192.168.5.40/svn/PythonWebProject/branches/release --username jiangwei --password 123456 --quiet --no-auth-cache -r 1379
 
 # python/django app only
-tar cf aaa.tar.gz -C release/aaa .
-mv aaa.tar.gz boot/
+tar cf aaa.tar -C release/aaa .
+mv aaa.tar boot/
 
 #
 # tar boot folder
@@ -24,10 +24,13 @@ CHECKSUM=$( md5sum $TARBALL | awk '{ print $1 }' )
 rm -rf output
 mkdir -p output
 
+rm -rf output/${TARBALL}
 mv $TARBALL output
 
-echo   "#           source    target"                               >  output/sysupgrade.txt
-echo   "REVISION    0         1     "                               >> output/sysupgrade.txt
-echo   "# FILE"                                                     >> output/sysupgrade.txt
-echo   "FILE        0         1         $TARBALL        $CHECKSUM"  >> output/sysupgrade.txt
+echo   "#           source      target"                             >  output/sysupgrade.txt
+echo   "REVISION    0           1     "                             >> output/sysupgrade.txt
+echo   "#           source      target"                             >> output/sysupgrade.txt
+echo   "BOOT        0           1   ${HTTPURL}/${TARBALL}   $CHECKSUM"  >> output/sysupgrade.txt
 
+ls -sail output
+cat output/sysupgrade.txt

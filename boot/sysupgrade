@@ -6,38 +6,35 @@ mkdir p2
 
 # this cannot fail, otherwise endless reboot
 mount -t ext4 /dev/mmcblk0p2 /p2
-if [ "$?" -ne 0 ]; then
-    reboot -f
-fi
+if [ "$?" -ne 0 ]; then reboot -f; fi
 
 mount -t ext4 /dev/mmcblk0p1 /p1
-if [ "$?" -ne 0 ]; then
-    # TODO
-    reboot -f   
-fi
-
-#
-# bring up httpd
-#
-if [ -e "/p2/boot/ipaddr" ]; then
-    busybox ifconfig eth0 $(cat /p2/boot/ipaddr) netmask 255.255.255.0 up
-    busybox httpd -h /p2/boot/www
-fi
-
-STATUS_FILE=/p2/boot/www/status.txt
-
-biecho () {
-    
-    echo "$1"
-    echo "${1}<br>" > $STATUS_FILE
-}
+if [ "$?" -ne 0 ]; then reboot -f; fi
 
 # overwrite netatalk global, fix bad homes section
-biecho "patch netatalk templates file"
+echo "patch netatalk templates file"
 cp /p2/boot/templates/netatalk/global /p1/etc/mininas/templates/netatalk/global
 
+# overwrite python/django server app
+echo "replace python/django server app"
+rm -rf /p1/srv/mini/aaa
+mkdir -p /p1/srv/mini/aaa
+busybox tar xf /p2/boot/aaa.tar -C /p1/srv/mini/aaa
 
-biecho "booting new system..."
+echo "update version info, current & next version, as well as status"
+echo 1 > /p1/etc/mininas/sysupgrade/curr_version
+rm /p1/etc/mininas/sysupgrade/next_version
+touch /p1/etc/mininas/sysupgrade/next_version
+echo "none" > /p1/etc/mininas/sysupgrade/status
+busybox sync
+
+echo ""
+echo "====================="
+echo "====================="
+echo "booting new system..."
+echo "====================="
+echo ""
+
 rm /p2/boot/cmdline
 busybox sync
 busybox reboot -f
